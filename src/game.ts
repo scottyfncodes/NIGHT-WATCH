@@ -57,6 +57,7 @@ export class Game implements RaccoonWorld, DirectorHost {
   pots = 0;
   hintsShown = new Set<string>();
   private clock = new THREE.Clock();
+  static readonly USE_RANGE = 11;
   private interactTarget: Interactable | null = null;
   private holdT = 0;
   private menuT = 0;
@@ -69,7 +70,6 @@ export class Game implements RaccoonWorld, DirectorHost {
   private quality: 'low' | 'medium' | 'high';
   private firstHit = false;
   private dangerSmooth = 0;
-  private boundsToastT = 0;
   private dryT = 0;
   private podsThisWave = 0;
 
@@ -377,10 +377,10 @@ export class Game implements RaccoonWorld, DirectorHost {
     r.detachLoot();
     r.carrying = null;
     r.carryAmount = 0;
-    this.hint('drop', 'It dropped the food! Grab it with E/USE — or it rolls back to camp in a few seconds.');
+    this.hint('drop', 'It dropped the food! Aim at it and hit E/USE to grab it — or it rolls back to camp in a few seconds.');
   }
   onBreach(_r: Raccoon, op: Opening) {
-    this.ui.toast(`The ${op.label} is torn! Hold ${this.input.touch ? 'USE' : 'E'} near it to duct-tape it.`);
+    this.ui.toast(`The ${op.label} is torn! Aim at it and hold ${this.input.touch ? 'USE' : 'E'} to duct-tape it.`);
   }
   onBossCommand(r: Raccoon) {
     this.warnings.push({ pos: r.pos.clone(), kind: 'boss', t: 1.5 });
@@ -442,7 +442,7 @@ export class Game implements RaccoonWorld, DirectorHost {
     this.podsThisWave = 0;
     if (this.loadout.autoStrap) this.cooler.strap = this.loadout.bungeeTime;
     this.camp.tripwires.forEach((t, k) => (t.armed = k < this.loadout.tripwires));
-    if (w.id === 3) setTimeout(() => this.hint('strap', this.input.touch ? 'Tip: walk to the cooler and tap USE to bungee-strap the lid.' : 'Tip: walk to the cooler and press E to bungee-strap the lid.'), 6000);
+    if (w.id === 3) setTimeout(() => this.hint('strap', this.input.touch ? 'Tip: aim at the cooler and tap USE to bungee-strap the lid.' : 'Tip: aim at the cooler and press E to bungee-strap the lid.'), 6000);
     if (w.id === 4) setTimeout(() => this.hint('tent', 'Watch the tent — zip the windows and doors with E/USE. Torn mesh can be taped.'), 9000);
   }
   onWaveClear(w: WaveDef, i: number) {
@@ -526,22 +526,14 @@ export class Game implements RaccoonWorld, DirectorHost {
     const playing = this.mode === 'playing';
     // input
     if (playing) {
-      this.input.poll();
       const look = this.input.consumeLook();
       this.lookDelta.copy(look);
       this.player.look(look.x, look.y);
       for (const a of this.input.takeActions()) this.handleAction(a);
     } else {
-      this.input.move.set(0, 0);
       this.lookDelta.set(0, 0);
     }
-    this.player.update(dt, playing ? this.input.move : new THREE.Vector2(), this.tent, this.camp, L);
-    if (this.player.boundsHit > 0.4 && this.boundsToastT <= 0) {
-      this.ui.toast('Mom’s rule: stay by the tent. (The cooler and fire ring are as far as you go.)', 2600);
-      this.boundsToastT = 8;
-      this.player.boundsHit = 0;
-    }
-    this.boundsToastT -= dt;
+    this.player.update(dt, L);
     // firing
     this.marker.lowered += ((playing ? 0 : 1) - this.marker.lowered) * Math.min(1, dt * 4);
     if (playing && this.input.fireHeld) {
@@ -696,7 +688,7 @@ export class Game implements RaccoonWorld, DirectorHost {
         return;
       }
       this.tent.impact(fab.point, 1);
-      if (Tent.isInside(a) && fab.opening) this.hint('mesh', `That window is zipped — paint can't get through mesh. Unzip it (${this.input.touch ? 'USE' : 'E'}) or step outside.`);
+      if (Tent.isInside(a) && fab.opening) this.hint('mesh', `That window is zipped — paint can't get through mesh. Aim at it and unzip it (${this.input.touch ? 'USE' : 'E'}).`);
       else if (Tent.isInside(a)) this.hint('fabric', 'You just painted the inside of your tent. Shoot through an open door or window.');
       this.impactSurface(p, fab.point, fab.opening ? fab.normal.clone().multiplyScalar(Tent.isInside(a) ? -1 : 1) : (Tent.isInside(a) ? fab.normal.clone().negate() : fab.normal), true);
       return;
@@ -916,14 +908,17 @@ export class Game implements RaccoonWorld, DirectorHost {
     const fwd = this.player.forward();
     let best: Interactable | null = null;
     let bs = -1;
+    // The kid never leaves their post, so USE works on whatever the crosshair is on.
     for (const it of this.interactables()) {
       const to = it.pos.clone().sub(cam.position);
-      const flat = Math.hypot(it.pos.x - this.player.pos.x, it.pos.z - this.player.pos.z);
-      if (flat > it.range) continue;
       const d = to.length();
+      if (d > Game.USE_RANGE) continue;
       const facing = to.dot(fwd) / Math.max(0.01, d);
-      if (facing < 0.55) continue;
-      const score = facing * 2 - flat * 0.5;
+      if (facing <= 0) continue;
+      const off = Math.acos(Math.min(1, facing)); // radians off the crosshair
+      const tol = Math.max(0.09, Math.atan2(0.55, d)); // ~half a metre of slack around the target
+      if (off > tol) continue;
+      const score = 1 - off / tol - d * 0.01;
       if (score > bs) { bs = score; best = it; }
     }
     this.interactTarget = best;

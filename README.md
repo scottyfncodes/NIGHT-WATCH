@@ -17,14 +17,16 @@ Runs in any modern browser with WebGL, including iPhone Safari. It's a static si
 
 ### Controls
 
+You hold your post in the middle of the tent: no walking, just aim and shoot. **Use** works on whatever is under the crosshair (tent zippers, the cooler lid and bungee, lanterns, the radio, spare batteries, dropped loot), up to about 11 m away.
+
+
 | | Desktop | Touch |
 |---|---|---|
-| Aim | Mouse (click to lock) | Drag on the right side (or drag the FIRE button) |
-| Move | WASD | Left-side virtual stick |
+| Aim | Mouse (click to lock) | Drag anywhere (or drag the FIRE button) |
 | Fire | Left click (hold for semi-auto) | FIRE |
 | Reload | R | RELOAD |
 | Flashlight | F | LIGHT |
-| Use / zip / strap / repair | E (hold to tape) | USE (hold to tape) |
+| Use / zip / strap / repair (whatever you're aiming at) | E (hold to tape) | USE (hold to tape) |
 | Switch ammo | Q | AMMO |
 | Hot dog / pots | G / N | 🌭 / 🔔 |
 | Pause | Esc | ❚❚ |
@@ -40,7 +42,7 @@ Six encounters from 10:25 PM to 6:00 AM:
 5. **The Raid**: eyes in every gap between the pines, then a coordinated pincer.
 6. **Big Earl**: the boss walks into your flashlight beam and rallies the crew. Hold the cooler until sunrise.
 
-You lose if the cooler is emptied, or if your **nerve** maxes out (raccoons in the tent with you, Tanks charging you) and you bolt for the camper.
+You lose if the cooler is emptied, or if your **nerve** maxes out (raccoons in the tent with you) and you bolt for the camper.
 
 ## Systems
 

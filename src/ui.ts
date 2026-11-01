@@ -100,7 +100,7 @@ export class UI {
         <div class="prompt"></div>
         <div class="banner"><small class="banner-kicker"></small><h2 class="banner-title"></h2><p class="banner-sub"></p></div>
         <div class="toast"></div>
-        <div class="keys-hint">WASD move · Mouse aim · Click fire · R reload · F light · E use · Q ammo · Esc pause</div>
+        <div class="keys-hint">Mouse aim · Click fire · R reload · F light · E use · Q ammo · Esc pause</div>
       </section>
 
       <section class="screen panel-screen pause" data-screen="pause">
