@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#050a12"/>
+      <stop offset="0.65" stop-color="#0f2032"/>
+      <stop offset="1" stop-color="#1a2c34"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.55" stop-color="#eef2f8"/>
+      <stop offset="0.6" stop-color="#cfd9ec" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#9fb4e0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="eye" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.3" stop-color="#eaff9a"/>
+      <stop offset="0.6" stop-color="#c8ff4a" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#c8ff4a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fur" cx="0.5" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#9a958c"/>
+      <stop offset="1" stop-color="#5d5850"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <!-- moon + stars -->
+  <circle cx="378" cy="118" r="70" fill="url(#moon)"/>
+  <g fill="#cfd8ff" opacity="0.8">
+    <circle cx="90" cy="70" r="2.5"/><circle cx="160" cy="130" r="2"/><circle cx="250" cy="60" r="2.5"/>
+    <circle cx="460" cy="230" r="2"/><circle cx="60" cy="190" r="2"/>
+  </g>
+  <!-- loblolly pines: tall bare trunks, clumpy crowns -->
+  <g fill="#0a1510">
+    <rect x="40" y="150" width="16" height="362"/><ellipse cx="48" cy="150" rx="46" ry="30"/><ellipse cx="30" cy="180" rx="30" ry="18"/>
+    <rect x="128" y="96" width="14" height="416"/><ellipse cx="135" cy="96" rx="40" ry="26"/><ellipse cx="160" cy="124" rx="28" ry="16"/>
+    <rect x="452" y="170" width="18" height="342"/><ellipse cx="461" cy="168" rx="50" ry="30"/><ellipse cx="486" cy="200" rx="30" ry="18"/>
+    <rect x="392" y="250" width="12" height="262"/><ellipse cx="398" cy="248" rx="34" ry="22"/>
+  </g>
+  <!-- ground -->
+  <path d="M0 430 Q256 400 512 430 V512 H0Z" fill="#120d0a"/>
+  <!-- raccoon peeking up -->
+  <g transform="translate(256 360)">
+    <!-- ears -->
+    <path d="M-118 -84 L-92 -168 L-40 -110Z" fill="#6a655c"/>
+    <path d="M118 -84 L92 -168 L40 -110Z" fill="#6a655c"/>
+    <path d="M-104 -96 L-90 -146 L-58 -112Z" fill="#1c1714"/>
+    <path d="M104 -96 L90 -146 L58 -112Z" fill="#1c1714"/>
+    <path d="M-92 -168 L-80 -148 M92 -168 L80 -148" stroke="#e8e2d6" stroke-width="7" stroke-linecap="round"/>
+    <!-- head -->
+    <ellipse cx="0" cy="10" rx="150" ry="132" fill="url(#fur)"/>
+    <!-- white brow -->
+    <path d="M-128 -30 Q0 -84 128 -30 Q60 -44 0 -42 Q-60 -44 -128 -30Z" fill="#ece6da"/>
+    <!-- bandit mask -->
+    <path d="M-150 10 Q-120 -40 -40 -26 Q0 -16 40 -26 Q120 -40 150 10 Q110 52 46 34 Q0 22 -46 34 Q-110 52 -150 10Z" fill="#14100e"/>
+    <!-- muzzle -->
+    <ellipse cx="0" cy="78" rx="72" ry="54" fill="#e6dfd0"/>
+    <ellipse cx="0" cy="52" rx="24" ry="16" fill="#0d0a09"/>
+    <!-- glowing eyes -->
+    <circle cx="-66" cy="4" r="44" fill="url(#eye)"/>
+    <circle cx="66" cy="4" r="44" fill="url(#eye)"/>
+    <ellipse cx="-66" cy="4" rx="14" ry="12" fill="#f6ffd0"/>
+    <ellipse cx="66" cy="4" rx="14" ry="12" fill="#f6ffd0"/>
+    <!-- hot pink paintball splat -->
+    <g transform="translate(70 -70) rotate(18)" fill="#ff2e88">
+      <path d="M0 -26 Q10 -30 16 -18 Q30 -20 26 -6 Q38 2 24 10 Q28 26 12 22 Q4 34 -6 22 Q-22 28 -20 12 Q-34 6 -22 -4 Q-30 -20 -12 -18 Q-10 -30 0 -26Z"/>
+      <circle cx="36" cy="-24" r="5"/><circle cx="-30" cy="26" r="4"/><circle cx="40" cy="20" r="3.5"/>
+      <path d="M8 22 Q10 40 6 52 Q2 40 4 22Z"/>
+    </g>
+  </g>
+</svg>
