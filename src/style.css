@@ -283,10 +283,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ─────────── Touch controls ─────────── */
 #touch { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
 #ui.in-game #touch { pointer-events: auto; }
-#touch .joy-zone { position: absolute; left: 0; top: 30%; bottom: 0; width: 40%; pointer-events: auto; touch-action: none; }
-#touch .look-zone { position: absolute; left: 40%; right: 0; top: 0; bottom: 0; pointer-events: auto; touch-action: none; }
-#touch .joy-base { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(241, 230, 207, 0.35); background: rgba(7, 13, 20, 0.25); display: none; pointer-events: none; }
-#touch .joy-knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; border-radius: 50%; background: rgba(241, 230, 207, 0.4); transform: translate(-50%, -50%); }
+#touch .look-zone { position: absolute; left: 0; right: 0; top: 0; bottom: 0; pointer-events: auto; touch-action: none; }
 .tbtn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; border: 2px solid rgba(241, 230, 207, 0.45); background: rgba(7, 13, 20, 0.42); display: flex; align-items: center; justify-content: center; font-weight: 800; letter-spacing: 0.1em; font-size: 10px; color: var(--cream); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); padding: 0; }
 .tbtn.down { background: rgba(255, 176, 74, 0.45); border-color: var(--amber); }
 .tbtn.fire { width: 96px; height: 96px; right: calc(22px + var(--safe-r)); bottom: calc(22px + var(--safe-b)); font-size: 13px; border-color: rgba(255, 110, 150, 0.8); background: rgba(255, 46, 136, 0.18); }
