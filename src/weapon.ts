@@ -16,9 +16,19 @@ export interface Projectile {
 
 export const GRAVITY = 5.2;
 
+/** Sight line in gun space: an offset rail on the left so the hopper never blocks the view. */
+const SX = -0.11, SY = 0.078;
+const HIP = new THREE.Vector3(0.2, -0.2, -0.46);
+const AIMED = new THREE.Vector3(-SX, -SY, -0.27);
+
 /** The kid's paintball marker, rendered as a first-person view model. */
 export class Marker {
   scene = new THREE.Scene();
+  /** Separate camera for the view model so zooming the world doesn't balloon the gun. */
+  camera = new THREE.PerspectiveCamera(70, 1, 0.01, 10);
+  ironSights = new THREE.Group();
+  redDot = new THREE.Group();
+  scope = new THREE.Group();
   root = new THREE.Group(); // follows camera
   gun = new THREE.Group();
   pump: THREE.Group;
@@ -125,8 +135,68 @@ export class Marker {
     fore2.position.copy(from).add(to).multiplyScalar(0.5);
     fore2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
     this.gun.add(sleeve, hand, fore2);
-    this.gun.position.set(0.2, -0.2, -0.46);
+    this.buildSights(dark, blue);
+    this.gun.position.copy(HIP);
     this.gun.rotation.y = 0.04;
+  }
+
+  private buildSights(dark: THREE.Material, blue: THREE.Material) {
+    const box = (w: number, h: number, d: number, m: THREE.Material, x: number, y: number, z: number) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+      b.position.set(x, y, z);
+      return b;
+    };
+    const railTop = SY - 0.024;
+    // side rail + brackets bolted to the body
+    const rail = box(0.016, 0.01, 0.52, dark, SX, railTop - 0.005, -0.15);
+    const b1 = box(Math.abs(SX) - 0.02, 0.01, 0.035, dark, (SX - 0.02) / 2 + 0.01, railTop - 0.005, 0.04);
+    const b2 = b1.clone(); b2.position.z = -0.2;
+    this.gun.add(rail, b1, b2);
+
+    // iron sights: notch at the back, fibre-optic post up front
+    const ears = new THREE.MeshStandardMaterial({ color: 0x1a1b1e, roughness: 0.5, metalness: 0.5 });
+    const fibre = new THREE.MeshBasicMaterial({ color: 0xff7a1a });
+    const rearH = SY - railTop + 0.004;
+    this.ironSights.add(
+      box(0.024, 0.005, 0.008, ears, SX, railTop + 0.0025, -0.05),
+      box(0.006, rearH, 0.006, ears, SX - 0.0078, railTop + rearH / 2, -0.05),
+      box(0.006, rearH, 0.006, ears, SX + 0.0078, railTop + rearH / 2, -0.05),
+      box(0.0036, SY - railTop, 0.005, ears, SX, railTop + (SY - railTop) / 2 - 0.002, -0.39),
+      box(0.003, SY - railTop + 0.006, 0.012, ears, SX - 0.013, railTop + (SY - railTop + 0.006) / 2, -0.39),
+      box(0.003, SY - railTop + 0.006, 0.012, ears, SX + 0.013, railTop + (SY - railTop + 0.006) / 2, -0.39),
+    );
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.0026, 8, 6), fibre);
+    tip.position.set(SX, SY, -0.389);
+    this.ironSights.add(tip);
+
+    // red dot: a stubby tube with tinted glass and the dot itself
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.05, 18, 1, true).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x18191c, roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide }));
+    tube.position.set(SX, SY, -0.03);
+    const glass = new THREE.Mesh(new THREE.CircleGeometry(0.018, 18), new THREE.MeshBasicMaterial({ color: 0x6fb7ff, transparent: true, opacity: 0.12, depthWrite: false }));
+    glass.position.set(SX, SY, -0.05);
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.0011, 6, 4), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
+    dot.position.set(SX, SY, -0.049);
+    this.redDot.add(tube, glass, dot, box(0.026, SY - railTop - 0.017, 0.04, dark, SX, railTop + (SY - railTop - 0.017) / 2, -0.03));
+
+    // scope: long tube, bell and eyepiece on two rings
+    const sm = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.35, metalness: 0.7 });
+    const cyl = (r1: number, r2: number, len: number, z: number) => {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, len, 18).rotateX(Math.PI / 2), sm);
+      c.position.set(SX, SY, z);
+      return c;
+    };
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.025, 18), new THREE.MeshStandardMaterial({ color: 0x1a3a6a, roughness: 0.05, metalness: 0.9, emissive: 0x0a1a33 }));
+    lens.position.set(SX, SY, -0.296);
+    lens.rotation.y = Math.PI;
+    this.scope.add(
+      cyl(0.015, 0.015, 0.26, -0.08),
+      cyl(0.026, 0.017, 0.07, -0.26),
+      cyl(0.019, 0.022, 0.05, 0.07),
+      lens,
+      box(0.012, SY - railTop - 0.012, 0.016, sm, SX, railTop + (SY - railTop - 0.012) / 2, 0.0),
+      box(0.012, SY - railTop - 0.012, 0.016, sm, SX, railTop + (SY - railTop - 0.012) / 2, -0.16),
+    );
+    this.gun.add(this.ironSights, this.redDot, this.scope);
   }
 
   configure(L: Loadout) {
@@ -143,6 +213,9 @@ export class Marker {
     // visible upgrades
     this.bodyMat.color.setHex(L.semiAuto ? 0x8a1f24 : 0x2b2d33);
     this.pump.visible = true;
+    this.ironSights.visible = L.optic === 0;
+    this.redDot.visible = L.optic === 1;
+    this.scope.visible = L.optic === 2;
     const blen = [0.36, 0.48, 0.6][L.muzzle >= 56 ? 2 : L.muzzle >= 48 ? 1 : 0];
     this.barrel.scale.set(1, 1, blen / 0.36);
     this.barrel.position.z = -0.15 - blen / 2;
@@ -225,7 +298,7 @@ export class Marker {
     return type;
   }
 
-  update(dt: number, L: Loadout, moving: number, lookDelta: THREE.Vector2, flash: boolean) {
+  update(dt: number, L: Loadout, ads: number, lookDelta: THREE.Vector2, flash: boolean) {
     this.cooldown = Math.max(0, this.cooldown - dt);
     if (this.reloading > 0) {
       this.reloading -= dt;
@@ -245,18 +318,19 @@ export class Marker {
     this.pumpT = Math.min(1, this.pumpT + dt / Math.max(0.15, L.fireInterval * 0.8));
     const fm = this.muzzleFlash.material as THREE.MeshBasicMaterial;
     fm.opacity = Math.max(0, fm.opacity - dt * 14);
-    // sway & bob
+    // sway & idle breathing, both damped while aiming
+    const steady = 1 - ads * 0.75;
     this.sway.x += (-lookDelta.x * 0.0009 - this.sway.x) * Math.min(1, dt * 10);
     this.sway.y += (lookDelta.y * 0.0009 - this.sway.y) * Math.min(1, dt * 10);
-    this.bob += dt * (moving > 0.1 ? 9 : 1.6);
-    const bobA = moving > 0.1 ? 0.012 : 0.003;
+    this.bob += dt * 1.6;
+    const bobA = 0.003 * steady;
     const reloadDip = this.reloading > 0 ? Math.sin(Math.min(1, 1 - this.reloading / this.reloadTotal) * Math.PI) : 0;
-    this.gun.position.set(
-      0.2 + this.sway.x + Math.cos(this.bob) * bobA,
-      -0.2 + this.sway.y + Math.abs(Math.sin(this.bob)) * bobA - reloadDip * 0.08 - this.lowered * 0.3,
-      -0.46 + this.kick * 0.05,
-    );
-    this.gun.rotation.set(this.kick * 0.12 + reloadDip * 0.5, 0.04 + this.sway.x * 2, reloadDip * 0.6);
+    const e = ads * ads * (3 - 2 * ads); // smoothstep
+    this.gun.position.lerpVectors(HIP, AIMED, e);
+    this.gun.position.x += this.sway.x * steady + Math.cos(this.bob) * bobA;
+    this.gun.position.y += this.sway.y * steady + Math.abs(Math.sin(this.bob)) * bobA - reloadDip * 0.08 - this.lowered * 0.3;
+    this.gun.position.z += this.kick * (0.05 - e * 0.03);
+    this.gun.rotation.set(this.kick * (0.12 - e * 0.08) + reloadDip * 0.5, (0.04 + this.sway.x * 2) * (1 - e), reloadDip * 0.6);
     // pump stroke: back then forward
     if (!L.semiAuto) {
       const p = this.pumpT < 1 ? Math.sin(this.pumpT * Math.PI) : 0;

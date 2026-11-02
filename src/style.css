@@ -348,3 +348,15 @@ body.touch.portrait .rotate-hint { display: block; }
 
 .fatal { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 24px; }
 .fatal h1 { font-family: var(--slab); font-weight: 400; font-size: 48px; margin: 0 0 12px; }
+
+/* ─────────── Aim down sights ─────────── */
+.tbtn.aim { width: 76px; height: 76px; left: calc(26px + var(--safe-l, 0px)); bottom: calc(34px + var(--safe-b)); font-size: 12px; }
+.tbtn.aim.on { background: rgba(255, 176, 74, 0.4); border-color: var(--amber); }
+.crosshair { transition: opacity 0.12s; }
+#ui.ads .crosshair { opacity: 0; }
+.reddot { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #ff2a2a; box-shadow: 0 0 4px 1px rgba(255, 40, 40, 0.85), 0 0 10px 2px rgba(255, 40, 40, 0.35); opacity: 0; transition: opacity 0.1s; pointer-events: none; }
+#ui.ads-dot .reddot { opacity: 1; }
+.scope { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.08s; }
+#ui.ads-scope .scope { opacity: 1; }
+.scope .lens { position: absolute; left: 50%; top: 50%; width: min(86vh, 86vw); height: min(86vh, 86vw); transform: translate(-50%, -50%); border-radius: 50%; box-shadow: 0 0 0 200vmax #030405, inset 0 0 40px 18px rgba(0, 0, 0, 0.85); }
+.scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }

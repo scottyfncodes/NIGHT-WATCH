@@ -96,11 +96,18 @@ export class UI {
         </div>
         <div class="crosshair"><i class="dot"></i><svg class="ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16"/></svg></div>
         <div class="hitmarker"></div>
+        <div class="reddot"></div>
+        <div class="scope"><div class="lens"><svg viewBox="-100 -100 200 200" aria-hidden="true">
+          <g fill="#050505"><rect x="-100" y="-1.6" width="72" height="3.2"/><rect x="28" y="-1.6" width="72" height="3.2"/><rect x="-1.6" y="28" width="3.2" height="72"/><rect x="-1.6" y="-100" width="3.2" height="72"/></g>
+          <g stroke="#050505" stroke-width="0.6"><line x1="-28" y1="0" x2="28" y2="0"/><line x1="0" y1="-28" x2="0" y2="28"/></g>
+          <g fill="#050505"><circle cx="-14" cy="0" r="1"/><circle cx="14" cy="0" r="1"/><circle cx="0" cy="14" r="1"/><circle cx="0" cy="7" r="0.8"/><circle cx="0" cy="21" r="1"/><circle cx="0" cy="-14" r="1"/></g>
+          <circle r="1.1" fill="#ff3030"/>
+        </svg></div></div>
         <div class="warnings"></div>
         <div class="prompt"></div>
         <div class="banner"><small class="banner-kicker"></small><h2 class="banner-title"></h2><p class="banner-sub"></p></div>
         <div class="toast"></div>
-        <div class="keys-hint">Mouse aim · Click fire · R reload · F light · E use · Q ammo · Esc pause</div>
+        <div class="keys-hint">Mouse aim · Click fire · Right-click zoom · R reload · F light · E use · Q ammo · Esc pause</div>
       </section>
 
       <section class="screen panel-screen pause" data-screen="pause">
@@ -304,6 +311,14 @@ export class UI {
   tick(dt: number) {
     if (this.toastTimer > 0) { this.toastTimer -= dt; if (this.toastTimer <= 0) this.els.toast.classList.remove('on'); }
     if (this.bannerTimer > 0) { this.bannerTimer -= dt; if (this.bannerTimer <= 0) this.els.banner.classList.remove('on'); }
+  }
+
+  /** Aim-down-sights overlay: 0 = hip, 1 = fully aimed. */
+  ads(amount: number, optic: 0 | 1 | 2) {
+    const c = this.root.classList;
+    c.toggle('ads', amount > 0.55);
+    c.toggle('ads-dot', optic === 1 && amount > 0.85);
+    c.toggle('ads-scope', optic === 2 && amount > 0.9);
   }
 
   hud(d: HudData) {

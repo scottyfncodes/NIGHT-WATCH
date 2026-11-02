@@ -107,6 +107,10 @@ export interface Loadout {
   spread: number; // radians
   moveSpreadMul: number;
   muzzle: number; // m/s
+  optic: 0 | 1 | 2; // iron sights, red dot, scope
+  zoom: number; // magnification while aiming down sights
+  adsSpreadMul: number; // spread multiplier when fully aimed
+  adsTime: number; // seconds to raise the sights
   reserve: number;
   specials: { glow: number; sticky: number; burst: number; decoy: number };
   glowTime: number;
@@ -141,6 +145,10 @@ export function computeLoadout(save: SaveData): Loadout {
     spread: [0.026, 0.017, 0.0105][barrel],
     moveSpreadMul: barrel >= 2 ? 1.25 : 1.9,
     muzzle: [40, 48, 56][barrel],
+    optic: L('optics') as 0 | 1 | 2,
+    zoom: [1.5, 2.2, 4][L('optics')],
+    adsSpreadMul: [0.75, 0.55, 0.35][L('optics')],
+    adsTime: [0.16, 0.18, 0.26][L('optics')],
     reserve: 150 + [0, 40, 80, 130][L('extraPaint')],
     specials: {
       glow: [0, 10, 18][L('glow')],
