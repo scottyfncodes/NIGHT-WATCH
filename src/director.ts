@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WAVES, WaveDef, SpawnDef, LAYOUT, ARCHETYPES } from './config';
+import { WAVES, WaveDef, SpawnDef, LAYOUT, ARCHETYPES, LEVELS } from './config';
 import { audio } from './audio';
 
 export interface DirectorHost {
@@ -47,7 +47,9 @@ export class Director {
   /** Extra raccoons on later nights — new combos, not just more health. */
   private scaledSpawns(w: WaveDef): SpawnDef[] {
     const base = w.spawns.map((s) => ({ ...s }));
-    const n = this.host.night;
+    // each level brings its own new critters; the raccoon count only climbs once you've been through every level
+    const loop = Math.floor((this.host.night - 1) / LEVELS.length);
+    const n = 1 + loop * 1.5;
     if (n <= 1 || w.id === 1) return base;
     const extra = Math.floor(base.length * Math.min(1, (n - 1) * 0.35));
     const lastAt = Math.max(...base.map((s) => s.at));

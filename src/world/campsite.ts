@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LAYOUT } from '../config';
+import { LAYOUT, POSTS } from '../config';
 import { camperCanvasTexture, woodTexture, glowTexture } from '../textures';
 
 export type LootKind = 'marshmallows' | 'chips' | 'hotdogs' | 'bread' | 'soda';
@@ -189,6 +189,7 @@ export class Campsite {
     scene.add(this.group);
     this.buildCamper(quality);
     this.buildTable();
+    this.buildStand();
     this.buildFire();
     this.buildChairs();
     const glow = glowTexture();
@@ -362,6 +363,55 @@ export class Campsite {
     this.circles.push({ x, z, r: 2.6 });
     const b = new THREE.Box3().setFromObject(g);
     this.boxes.push(b);
+  }
+
+  /** Dad's ladder stand, strapped to the big pine east of camp (level 4's post). */
+  private buildStand() {
+    const P = POSTS.stand.pos;
+    const g = new THREE.Group();
+    g.position.set(P[0], 0, P[2]);
+    // face camp
+    g.rotation.y = Math.atan2(LAYOUT.bounds.x - P[0], LAYOUT.bounds.z - P[2]);
+    const steel = std(0x3b4232, 0.6, { metalness: 0.55 });
+    const camo = std(0x4f5a3a, 0.9);
+    const y = P[1];
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.05, 0.85), steel);
+    deck.position.set(0, y - 0.025, 0.05);
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 0.35), camo);
+    seat.position.set(0, y + 0.45, -0.3);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.05), camo);
+    back.position.set(0, y + 0.7, -0.48);
+    g.add(deck, seat, back);
+    // shooting rail
+    const rail = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.018, 6, 20, Math.PI), steel);
+    rail.rotation.x = -Math.PI / 2;
+    rail.position.set(0, y + 0.62, 0.05);
+    g.add(rail);
+    for (const sx of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.62, 6), steel);
+      post.position.set(sx * 0.42, y + 0.31, 0.05);
+      g.add(post);
+      // ladder rails down to the ground, leaning out from the tree
+      const from = new THREE.Vector3(sx * 0.2, 0, 1.25), to = new THREE.Vector3(sx * 0.2, y - 0.05, 0.42);
+      const len = from.distanceTo(to);
+      const lr = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, len, 6), steel);
+      lr.position.copy(from).add(to).multiplyScalar(0.5);
+      lr.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+      g.add(lr);
+    }
+    for (let i = 1; i < 10; i++) {
+      const k = i / 10;
+      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.4, 5).rotateZ(Math.PI / 2), steel);
+      rung.position.set(0, k * (y - 0.05), 1.25 - k * 0.83);
+      g.add(rung);
+    }
+    // ratchet strap around the trunk
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.02, 4, 18), std(0xc8a020, 0.7));
+    strap.rotation.x = Math.PI / 2;
+    strap.position.set(0, y + 0.3, -0.9);
+    g.add(strap);
+    g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+    this.group.add(g);
   }
 
   private buildTable() {

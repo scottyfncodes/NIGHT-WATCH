@@ -1,5 +1,5 @@
-import { UPGRADES, UpgradeId, PAINT_COLORS, AmmoType, AMMO_NAMES, AMMO_COLORS } from './config';
-import { SaveData, Settings, level, nextCost, computeLoadout, Loadout } from './save';
+import { UPGRADES, UpgradeId, PAINT_COLORS, AmmoType, AMMO_NAMES, AMMO_COLORS, LevelDef, LEVELS, levelForNight } from './config';
+import { SaveData, Settings, level, nextCost, computeLoadout, Loadout, lockedUntil } from './save';
 
 const CRATE = `<svg class="crate" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M1.5 7.5h13M5.5 3.5v10M10.5 3.5v10" stroke="currentColor" stroke-width="1.2"/></svg>`;
 const hex = (n: number) => '#' + n.toString(16).padStart(6, '0');
@@ -19,6 +19,7 @@ export interface Warning { angle: number; kind: 'approach' | 'steal' | 'tent' | 
 export interface ResultData {
   won: boolean; reason: string; night: number; food: number; deterred: number; accuracy: number;
   lines: [string, number][]; total: number; supplies: number;
+  next: LevelDef; unlocks: string[];
 }
 
 export class UI {
@@ -126,6 +127,7 @@ export class UI {
       <section class="screen panel-screen results" data-screen="results">
         <div class="card report">
           <div class="report-head"><small class="report-kicker">Incident Report · Night 1</small><h2 class="report-title">Sunrise</h2><p class="report-reason"></p></div>
+          <div class="report-next"></div>
           <dl class="report-stats"></dl>
           <div class="report-earn"><span>Supplies earned</span><b class="earn-total">+0</b></div>
           <ul class="report-lines"></ul>
@@ -239,7 +241,7 @@ export class UI {
   refreshMenu(save: SaveData) {
     this.lastSave = save;
     this.root.querySelectorAll('.sup-count').forEach((e) => (e.textContent = String(save.supplies)));
-    this.els['play-sub'].textContent = `Night ${save.night}${save.bestNight ? ` · best: night ${save.bestNight}` : ''}`;
+    this.els['play-sub'].textContent = `Night ${save.night} · Level ${levelForNight(save.night).level}: ${levelForNight(save.night).name}${save.bestNight ? ` · best: night ${save.bestNight}` : ''}`;
     this.els['play-label'].textContent = save.night === 1 && !save.bestNight ? 'Start the Night' : 'Next Night';
   }
 
@@ -382,14 +384,19 @@ export class UI {
     (card.querySelector('.report-kicker') as HTMLElement).textContent = `Incident Report · Night ${r.night}`;
     (card.querySelector('.report-title') as HTMLElement).textContent = r.won ? 'Sunrise.' : 'Raccoons Win.';
     (card.querySelector('.report-reason') as HTMLElement).textContent = r.reason;
+    const nextEl = card.querySelector('.report-next') as HTMLElement;
+    nextEl.innerHTML = r.won
+      ? `<b>Next: Level ${r.next.level} · ${r.next.name}</b>${r.next.newCritter ? ` <span>${r.next.newCritter}</span>` : ''}${r.unlocks.length ? `<em>New at the Trading Post: ${r.unlocks.join(' · ')}</em>` : ''}`
+      : '';
+    nextEl.style.display = r.won ? '' : 'none';
     (card.querySelector('.report-stats') as HTMLElement).innerHTML = `
       <div><dt>Food left</dt><dd>${Math.ceil(r.food)}%</dd></div>
-      <div><dt>Raccoons deterred</dt><dd>${r.deterred}</dd></div>
+      <div><dt>Critters deterred</dt><dd>${r.deterred}</dd></div>
       <div><dt>Accuracy</dt><dd>${Math.round(r.accuracy * 100)}%</dd></div>`;
     (card.querySelector('.report-lines') as HTMLElement).innerHTML = r.lines.map(([k, v]) => `<li><span>${k}</span><i></i><b>+${v}</b></li>`).join('');
     const tot = card.querySelector('.earn-total') as HTMLElement;
     const nextBtn = card.querySelector('[data-act="next"]') as HTMLElement;
-    nextBtn.textContent = r.won ? `Night ${r.night + 1} →` : 'Try Again';
+    nextBtn.textContent = r.won ? `Night ${r.night + 1}: ${r.next.name} →` : 'Try Again';
     this.show('results');
     // count-up
     const start = performance.now();
@@ -410,13 +417,15 @@ export class UI {
       const lv = level(save, u.id);
       const max = u.costs.length;
       const cost = nextCost(save, u.id);
-      const afford = cost !== null && save.supplies >= cost;
+      const lock = lockedUntil(save, u.id);
+      const afford = cost !== null && save.supplies >= cost && lock === null;
       const desc = lv >= max ? u.desc[max - 1] : u.desc[lv];
+      const lockNote = lock !== null ? `<small class="lock-note">Unlocks at Level ${lock}: ${LEVELS[lock - 1].name}</small>` : '';
       const pips = Array.from({ length: max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('');
-      return `<article class="upg ${lv > 0 ? 'owned' : ''} ${lv >= max ? 'maxed' : ''}">
+      return `<article class="upg ${lv > 0 ? 'owned' : ''} ${lv >= max ? 'maxed' : ''} ${lock !== null ? 'locked' : ''}">
         <div class="badge"><span>${u.icon}</span></div>
-        <div class="upg-body"><h4>${u.name}</h4><p>${desc}</p><div class="pips">${pips}</div></div>
-        <button class="buy ${afford ? '' : 'cant'}" data-buy="${u.id}" ${cost === null ? 'disabled' : ''}>${cost === null ? 'MAXED' : `${CRATE}${cost}`}</button>
+        <div class="upg-body"><h4>${u.name}</h4><p>${desc}</p>${lockNote}<div class="pips">${pips}</div></div>
+        <button class="buy ${afford ? '' : 'cant'}" data-buy="${u.id}" ${cost === null || lock !== null ? 'disabled' : ''}>${cost === null ? 'MAXED' : lock !== null ? `LV ${lock}` : `${CRATE}${cost}`}</button>
       </article>`;
     }).join('');
   }

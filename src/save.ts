@@ -1,4 +1,4 @@
-import { UPGRADES, UpgradeId, PAINT_COLORS } from './config';
+import { UPGRADES, UpgradeId, PAINT_COLORS, LEVELS } from './config';
 
 export interface Settings {
   volume: number; // 0..1
@@ -90,9 +90,23 @@ export function nextCost(save: SaveData, id: UpgradeId): number | null {
   return lv >= def.costs.length ? null : def.costs[lv];
 }
 
+/** Highest campaign level the player has reached (the night they're on, capped at the last level). */
+export function reachedLevel(save: SaveData): number {
+  return Math.min(LEVELS.length, Math.max(1, save.night));
+}
+
+/** If the next tier of an upgrade is still locked, the level that unlocks it; otherwise null. */
+export function lockedUntil(save: SaveData, id: UpgradeId): number | null {
+  const def = UPGRADES.find((u) => u.id === id)!;
+  const lv = level(save, id);
+  if (lv >= def.costs.length) return null;
+  const need = def.unlock?.[lv] ?? 1;
+  return need > reachedLevel(save) ? need : null;
+}
+
 export function purchase(save: SaveData, id: UpgradeId): boolean {
   const cost = nextCost(save, id);
-  if (cost === null || save.supplies < cost) return false;
+  if (cost === null || save.supplies < cost || lockedUntil(save, id) !== null) return false;
   save.supplies -= cost;
   save.upgrades[id] = level(save, id) + 1;
   return true;
@@ -190,7 +204,7 @@ export interface NightStats {
 
 export function computeReward(s: NightStats): { total: number; lines: [string, number][] } {
   const lines: [string, number][] = [];
-  lines.push(['Raccoons deterred', s.deterred * 6 + s.tanks * 6]);
+  lines.push(['Critters deterred', s.deterred * 6 + s.tanks * 6]);
   if (s.boss) lines.push(['Big Earl ran off', 60]);
   lines.push(['Food saved', Math.round(s.food * 0.8)]);
   const acc = s.shots > 0 ? s.hits / s.shots : 0;
@@ -199,4 +213,16 @@ export function computeReward(s: NightStats): { total: number; lines: [string, n
   else lines.push(['Waves survived', s.wavesCleared * 10]);
   const total = lines.reduce((a, [, v]) => a + v, 0);
   return { total, lines };
+}
+
+/** Upgrade tiers that open up when the campaign first reaches a level (shown on the results screen). */
+export function unlockedAtLevel(lv: number, night: number): string[] {
+  if (night > LEVELS.length || lv <= 1) return [];
+  const out: string[] = [];
+  for (const u of UPGRADES) {
+    (u.unlock ?? []).forEach((need, i) => {
+      if (need === lv) out.push(u.costs.length > 1 ? `${u.name} ${'I'.repeat(i + 1).replace('IIII', 'IV')}` : u.name);
+    });
+  }
+  return out;
 }

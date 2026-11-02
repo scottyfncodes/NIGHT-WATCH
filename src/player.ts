@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Loadout } from './save';
+import { PostDef, POSTS } from './config';
 
 export class Player {
-  pos = new THREE.Vector3(0, 0, 0.1); // feet (fixed)
+  pos = new THREE.Vector3(0, 0, 0.1); // feet
   yaw = 0;
   pitch = -0.04;
   eye = 0.95;
@@ -25,11 +26,15 @@ export class Player {
     this.camera.add(this.flashlight.target);
   }
 
-  reset(L: Loadout) {
-    this.pos.copy(Player.POST);
-    this.yaw = 0.12;
-    this.pitch = -0.05;
-    this.eye = 0.95;
+  /** Where the kid is holding the line tonight. */
+  post: PostDef = POSTS.tent;
+
+  reset(L: Loadout, post: PostDef = POSTS.tent) {
+    this.post = post;
+    this.pos.set(...post.pos);
+    this.yaw = post.yaw;
+    this.pitch = post.pos[1] > 1.5 ? -0.28 : -0.05;
+    this.eye = post.eye;
     this.flashOn = false;
     this.battery = L.battery;
     this.inTent = true;
@@ -48,16 +53,14 @@ export class Player {
     this.pitch = THREE.MathUtils.clamp(this.pitch, -1.35, 1.35);
   }
 
-  /** The kid holds their post in the middle of the tent: aim and shoot, no walking around. */
-  static readonly POST = new THREE.Vector3(0, 0, 0.1);
-
+  /** The kid holds their post: aim and shoot, no walking around. */
   update(dt: number, L: Loadout) {
-    this.pos.copy(Player.POST);
+    this.pos.set(...this.post.pos);
     this.moving = 0;
-    this.inTent = true;
-    this.eye = 0.95;
+    this.inTent = this.post.inTent;
+    this.eye = this.post.eye;
     this.recoil = Math.max(0, this.recoil - dt * 5);
-    this.camera.position.set(this.pos.x, this.eye, this.pos.z);
+    this.camera.position.set(this.pos.x, this.pos.y + this.eye, this.pos.z);
     this.camera.rotation.set(this.pitch + this.recoil * 0.035, this.yaw, 0);
 
     // flashlight
