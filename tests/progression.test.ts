@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { defaultSave, purchase, computeLoadout, nextCost, level, computeReward, loadSave, writeSave } from '../src/save';
-import { UPGRADES, WAVES, ARCHETYPES } from '../src/config';
+import { defaultSave, purchase, computeLoadout, nextCost, level, computeReward, loadSave, writeSave, lockedUntil, unlockedAtLevel } from '../src/save';
+import { UPGRADES, WAVES, ARCHETYPES, LEVELS, levelForNight, wavesForLevel } from '../src/config';
 
 describe('upgrades', () => {
   it('purchasing deducts supplies and raises level', () => {
@@ -15,6 +15,7 @@ describe('upgrades', () => {
     s.supplies = 10;
     expect(purchase(s, 'semiauto')).toBe(false);
     s.supplies = 10000;
+    s.night = 2; // semi-auto unlocks at level 2
     expect(purchase(s, 'semiauto')).toBe(true);
     expect(nextCost(s, 'semiauto')).toBeNull();
     expect(purchase(s, 'semiauto')).toBe(false);
@@ -89,5 +90,60 @@ describe('night structure', () => {
   it('clock runs forward toward 6:00 AM', () => {
     for (let i = 1; i < WAVES.length; i++) expect(WAVES[i].clockStart).toBeGreaterThanOrEqual(WAVES[i - 1].clockEnd);
     expect(WAVES[5].clockEnd).toBe(480);
+  });
+});
+
+describe('upgrade locks', () => {
+  it('locks tiers until their level is reached', () => {
+    const s = defaultSave();
+    s.supplies = 10000;
+    expect(lockedUntil(s, 'semiauto')).toBe(2);
+    expect(purchase(s, 'semiauto')).toBe(false);
+    expect(s.supplies).toBe(10000);
+    s.night = 2;
+    expect(purchase(s, 'optics')).toBe(true); // red dot at level 2
+    expect(lockedUntil(s, 'optics')).toBe(3); // scope waits for the camper roof
+    expect(purchase(s, 'optics')).toBe(false);
+    s.night = 3;
+    expect(purchase(s, 'optics')).toBe(true);
+  });
+  it('every tier has an unlock level inside the campaign, and level 1 has something to buy', () => {
+    for (const u of UPGRADES) {
+      expect(u.unlock?.length ?? u.costs.length, u.id).toBe(u.costs.length);
+      for (const lv of u.unlock ?? []) expect(lv).toBeGreaterThanOrEqual(1), expect(lv).toBeLessThanOrEqual(LEVELS.length);
+    }
+    expect(UPGRADES.filter((u) => (u.unlock?.[0] ?? 1) === 1).length).toBeGreaterThanOrEqual(5);
+  });
+  it('announces new gear when a level is first reached', () => {
+    expect(unlockedAtLevel(2, 2).length).toBeGreaterThan(0);
+    expect(unlockedAtLevel(2, 6)).toEqual([]); // second time around, nothing new
+  });
+});
+
+describe('levels', () => {
+  it('moves the post every night and cycles after the last level', () => {
+    const posts = LEVELS.map((l) => l.post.id);
+    expect(new Set(posts).size).toBe(LEVELS.length);
+    expect(levelForNight(1).post.id).toBe('tent');
+    expect(levelForNight(LEVELS.length + 1).post.id).toBe('tent');
+  });
+  it('introduces squirrels, then possums', () => {
+    const has = (lv: number, t: string) => wavesForLevel(LEVELS[lv - 1]).some((w) => w.spawns.some((s) => s.type === t));
+    expect(has(1, 'squirrel') || has(1, 'possum')).toBe(false);
+    expect(has(2, 'squirrel')).toBe(true);
+    expect(has(2, 'possum')).toBe(false);
+    expect(has(3, 'possum')).toBe(true);
+    expect(has(4, 'squirrel') && has(4, 'possum')).toBe(true);
+    for (const l of LEVELS) {
+      const ws = wavesForLevel(l);
+      expect(ws.length).toBe(WAVES.length);
+      expect(ws[ws.length - 1].spawns.some((s) => s.type === 'boss')).toBe(true);
+      for (const w of ws) for (const sp of w.spawns) expect(ARCHETYPES[sp.type]).toBeDefined();
+    }
+  });
+  it('does not mutate the base raccoon night', () => {
+    const before = JSON.stringify(WAVES);
+    wavesForLevel(LEVELS[3]);
+    expect(JSON.stringify(WAVES)).toBe(before);
   });
 });

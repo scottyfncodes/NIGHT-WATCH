@@ -360,3 +360,14 @@ body.touch.portrait .rotate-hint { display: block; }
 #ui.ads-scope .scope { opacity: 1; }
 .scope .lens { position: absolute; left: 50%; top: 50%; width: min(86vh, 86vw); height: min(86vh, 86vw); transform: translate(-50%, -50%); border-radius: 50%; box-shadow: 0 0 0 200vmax #030405, inset 0 0 40px 18px rgba(0, 0, 0, 0.85); }
 .scope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* ─────────── Levels & locked upgrades ─────────── */
+.report-next { margin: 10px 0 2px; padding: 10px 12px; border-left: 3px solid var(--amber); background: rgba(31, 42, 34, 0.08); font-size: 13px; line-height: 1.4; }
+.report-next b { display: block; font-size: 14px; letter-spacing: 0.02em; }
+.report-next span { display: block; color: var(--ink-soft); margin-top: 2px; }
+.report-next em { display: block; font-style: normal; font-weight: 700; margin-top: 6px; color: #2c5a3a; }
+.upg.locked { opacity: 0.62; }
+.upg.locked .badge { filter: grayscale(1); }
+.lock-note { display: block; margin: -2px 0 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #8a5a1a; }
+.lock-note::before { content: '🔒 '; }
+.upg.locked .buy { letter-spacing: 0.08em; }

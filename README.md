@@ -32,6 +32,19 @@ You hold your post in the middle of the tent: no walking, just aim and shoot. **
 | Hot dog / pots | G / N | 🌭 / 🔔 |
 | Pause | Esc | ❚❚ |
 
+## Levels
+
+Each night puts the kid at a new post with a different view of camp, and brings a new critter:
+
+| Level | Post | New |
+|---|---|---|
+| 1 | **The Tent**: zipped in, shooting out the doors and windows | Raccoons |
+| 2 | **The Picnic Table**: out in the open next to the cooler; critters spook easier, but Tanks will charge you | **Flying squirrels** glide down from the pines. Tiny, fast, zig-zagging, one hit sends them off |
+| 3 | **The Camper Roof**: the whole camp below you, long shots to the cooler | **Possums** are slow and stubborn and *play dead* on the first hit. Paint doesn't count while they're faking it |
+| 4 | **The Deer Stand**: Dad's ladder stand, high in the big pine | Everything at once |
+
+After Level 4 the cycle repeats with more raccoons each time around.
+
 ## The night
 
 Six encounters from 10:25 PM to 6:00 AM:
@@ -53,7 +66,7 @@ You lose if the cooler is emptied, or if your **nerve** maxes out (raccoons in t
 - **The cooler**: food meter, a lid that animates and gets left open, and a bungee strap that slows raccoons down. The food inside disappears item by item.
 - **Environment**: lanterns light raccoons up but also draw them in, and they get knocked out. The radio keeps raccoons off the tent but masks their sounds. There are spare flashlight batteries, tripwires, and dropped loot to recover.
 - **Audio**: everything is synthesized at load time with WebAudio. Crickets go quiet when a raccoon is near, sounds are HRTF-spatialized, and you can hear Dad snoring in the camper.
-- **Progression**: 17 upgrades across Marker / Defense / Utility, including Optics: iron sights (1.5× zoom) to a red dot (2.2×) to a 4× hunting scope with bullet-drop marks, saved in localStorage. Later nights add more raccoons and new archetype mixes.
+- **Progression**: 17 upgrades across Marker / Defense / Utility, saved in localStorage. Upgrade tiers unlock as you reach new levels (e.g. the red dot at Level 2 and the scope at Level 3), and the results screen lists what just opened up. Includes Optics: iron sights (1.5× zoom) to a red dot (2.2×) to a 4× hunting scope with bullet-drop marks. Later loops add more raccoons and new archetype mixes.
 
 ## Tech
 

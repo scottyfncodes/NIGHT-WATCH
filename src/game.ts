@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { LAYOUT, SpawnDef, WaveDef, AmmoType, AMMO_COLORS, UpgradeId } from './config';
-import { loadSave, writeSave, computeLoadout, Loadout, SaveData, purchase, computeReward, defaultSave, Settings } from './save';
+import { LAYOUT, SpawnDef, WaveDef, AmmoType, AMMO_COLORS, UpgradeId, LEVELS, LevelDef, levelForNight, wavesForLevel } from './config';
+import { loadSave, writeSave, computeLoadout, Loadout, SaveData, purchase, computeReward, defaultSave, Settings, unlockedAtLevel } from './save';
 import { audio } from './audio';
 import { Environment } from './world/environment';
 import { Tent, Opening } from './world/tent';
@@ -57,7 +57,9 @@ export class Game implements RaccoonWorld, DirectorHost {
   pots = 0;
   hintsShown = new Set<string>();
   private clock = new THREE.Clock();
-  static readonly USE_RANGE = 11;
+  static readonly USE_RANGE = 14;
+  /** Tonight's level: where the kid is posted and who's coming. */
+  level: LevelDef = LEVELS[0];
   /** 0 = hip fire, 1 = fully aimed down sights. */
   private ads = 0;
   private baseFov = 70;
@@ -251,11 +253,13 @@ export class Game implements RaccoonWorld, DirectorHost {
     this.save = loadSave();
     this.loadout = computeLoadout(this.save);
     this.night = this.save.night;
+    this.level = levelForNight(this.night);
+    this.director.waves = wavesForLevel(this.level);
     this.speedScale = 1 + Math.min(0.3, (this.night - 1) * 0.06);
     this.cooler.reset();
     this.tent.reset();
     this.camp.reset();
-    this.player.reset(this.loadout);
+    this.player.reset(this.loadout, this.level.post);
     this.ads = 0;
     this.marker.root.visible = true;
     this.marker.configure(this.loadout);
@@ -344,6 +348,8 @@ export class Game implements RaccoonWorld, DirectorHost {
       won, reason: this.endReason, night: this.night, food: this.cooler.food, deterred: this.stats.deterred,
       accuracy: this.marker.shots ? this.marker.hits / this.marker.shots : 0,
       lines: reward.lines, total: reward.total, supplies: this.save.supplies,
+      next: won ? levelForNight(this.night + 1) : this.level,
+      unlocks: won ? unlockedAtLevel(levelForNight(this.night + 1).level, this.night + 1) : [],
     });
   }
 
@@ -440,7 +446,12 @@ export class Game implements RaccoonWorld, DirectorHost {
   bossDeterred() { return !!this.boss && this.boss.deterred; }
   onWaveStart(w: WaveDef, i: number) {
     audio.play('beep', { vol: 0.6 });
-    if (!w.isBoss) this.ui.banner(`Wave ${i + 1} of ${this.director.totalWaves - 1}`, w.name, w.flavor);
+    if (i === 0) {
+      const lv = this.level;
+      this.ui.banner(`Night ${this.night} · Level ${lv.level}: ${lv.name}`, w.name, w.flavor, 4);
+      setTimeout(() => { if (this.mode === 'playing') this.ui.toast(lv.where, 5200); }, 4200);
+      if (lv.newCritter) setTimeout(() => { if (this.mode === 'playing') this.hint(`new-${lv.level}`, lv.newCritter!); }, 10500);
+    } else if (!w.isBoss) this.ui.banner(`Wave ${i + 1} of ${this.director.totalWaves - 1}`, w.name, w.flavor);
     if (i > 0) audio.play('sting', { vol: 0.45 });
     // resupply between waves
     if (w.resupply > 0) {

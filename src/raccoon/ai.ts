@@ -10,7 +10,7 @@ import { audio, SoundName } from '../audio';
 export type RState =
   | 'enter' | 'lurk' | 'peek' | 'investigate' | 'sneak' | 'approach' | 'distract' | 'attack' | 'charge'
   | 'steal' | 'retreat' | 'stunned' | 'escape' | 'frozen' | 'climb' | 'roof' | 'enterTent' | 'inside'
-  | 'exitTent' | 'bossIntro' | 'gone';
+  | 'exitTent' | 'bossIntro' | 'playdead' | 'gone';
 
 export interface Lure { pos: THREE.Vector3; time: number; radius: number; kind: 'decoy' | 'hotdog'; mesh?: THREE.Object3D }
 export interface DroppedLoot { kind: LootKind; amount: number; pos: THREE.Vector3; mesh: THREE.Object3D; time: number; claimed: Raccoon | null }
@@ -56,6 +56,8 @@ const VOICE: Record<ArchetypeId, SoundName[]> = {
   acrobat: ['chitter2', 'chitter'],
   distraction: ['chitter3', 'chitter'],
   boss: ['growl', 'chitter3'],
+  squirrel: ['chitter2', 'chitter2'],
+  possum: ['growl'],
 };
 
 export class Raccoon {
@@ -99,6 +101,9 @@ export class Raccoon {
   returnDelay = 0;
   speed = 0;
   airborne = 0;
+  airDur = 0.45;
+  glide = false;
+  playedDead = 0;
   airFrom = new THREE.Vector3();
   airTo = new THREE.Vector3();
   roofSpot = new THREE.Vector3();
@@ -120,6 +125,45 @@ export class Raccoon {
   get alive() { return !this.removed; }
   get active() { return !this.removed && this.state !== 'escape' && this.state !== 'gone'; }
   get isBoss() { return this.def.id === 'boss'; }
+  get species() { return this.def.species; }
+
+  /** Is the kid down on the ground where critters can see (and rush) them? */
+  private get kidGrounded() { return !this.w.playerInTent && this.w.playerPos.y < 1.2; }
+
+  private playDead(seconds: number) {
+    this.playedDead++;
+    this.stun = seconds;
+    this.vel.multiplyScalar(0.3);
+    this.setState('playdead');
+    this.w.hint('possum', 'It’s playing possum. Paint won’t count while it’s faking it, so wait for it to get back up.');
+  }
+
+  /** Flying squirrels arrive from the treetops. */
+  private startGlide() {
+    const camp = new THREE.Vector3(LAYOUT.bounds.x, 0, LAYOUT.bounds.z);
+    const dir = new THREE.Vector3(Math.sin(this.side), 0, -Math.cos(this.side));
+    let best: { x: number; z: number } | null = null, bs = -1e9;
+    for (const t of this.w.env.trees) {
+      const dx = t.x - camp.x, dz = t.z - camp.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 11 || d > 22) continue;
+      const score = (dx * dir.x + dz * dir.z) / d - Math.abs(d - 15) * 0.02;
+      if (score > bs) { bs = score; best = t; }
+    }
+    const from = best ? new THREE.Vector3(best.x, 6 + Math.random() * 2, best.z) : camp.clone().addScaledVector(dir, 16).setY(6.5);
+    const flat = new THREE.Vector3(from.x - camp.x, 0, from.z - camp.z).normalize();
+    const to = camp.clone().addScaledVector(flat, 6.5 + Math.random() * 2);
+    to.x += (Math.random() - 0.5) * 2; to.z += (Math.random() - 0.5) * 2;
+    this.pos.copy(from);
+    this.airFrom.copy(from);
+    this.airTo.copy(to);
+    this.airDur = Math.max(1.6, from.distanceTo(to) / 5.5);
+    this.airborne = this.airDur;
+    this.glide = true;
+    this.heading = Math.atan2(to.x - from.x, to.z - from.z);
+    audio.play('swish', { pos: from, vol: 0.5, rate: 1.4 });
+    this.w.hint('squirrel', 'Flying squirrel! Tiny and quick. Aim down the sights to tag it.');
+  }
 
   /** world-space hit spheres: [center, radius][] */
   hitSpheres(): [THREE.Vector3, number][] {
@@ -242,6 +286,11 @@ export class Raccoon {
       d.set(-desired.z * side, 0, desired.x * side).addScaledVector(desired, 0.35);
     }
     d.normalize();
+    if (this.species === 'squirrel' && speed > this.def.walk * 1.2 && dist > 1.2) {
+      // squirrels never run a straight line
+      const zz = Math.sin(this.w.time * 8 + this.id * 1.7) * 0.8;
+      d.set(d.x - d.z * zz, 0, d.z + d.x * zz).normalize();
+    }
     const step = Math.min(dist, speed * dt);
     const before = this.pos.clone();
     this.pos.addScaledVector(d, step);
@@ -375,6 +424,11 @@ export class Raccoon {
     if (this.removed) return;
     this.model.addSplat(point, color, ammo === 'glow');
     if (this.state === 'escape') return;
+    if (this.state === 'playdead') {
+      // faking it: the paint sticks, but it doesn't flinch
+      audio.play('hitfur', { pos: point, vol: 0.5 });
+      return;
+    }
     const L = this.w.loadout;
     if (ammo === 'glow') this.glow = L.glowTime;
     if (ammo === 'sticky') this.slow = L.stickyTime;
@@ -417,6 +471,11 @@ export class Raccoon {
       }
       return;
     }
+    if (this.species === 'possum' && this.resolve > 0 && (this.playedDead === 0 || Math.random() < 0.35)) {
+      this.vel.multiplyScalar(0.4);
+      this.playDead(3.5 + Math.random() * 1.5);
+      return;
+    }
     this.stun = this.def.stun;
     if (this.state === 'inside' || this.state === 'enterTent' || this.state === 'exitTent') {
       // bolt out of the tent through its opening
@@ -427,7 +486,8 @@ export class Raccoon {
 
   scareNoise() {
     if (!this.active || this.isBoss) return;
-    if (this.state === 'stunned') return;
+    if (this.state === 'stunned' || this.state === 'playdead') return;
+    if (this.species === 'possum') { if (this.carrying) this.w.dropLoot(this); this.playDead(3); return; }
     this.scared(true);
   }
 
@@ -466,7 +526,7 @@ export class Raccoon {
     // every scare makes them bolder — they won't be shooed forever
     const fearR = this.def.fear * (this.scares >= 4 ? 0 : this.scares >= 2 ? 0.55 : 1);
     const fearless = fearR === 0 || this.rally > 0;
-    if (!fearless && !w.playerInTent && distPlayer < fearR && this.fearCooldown <= 0 &&
+    if (!fearless && this.kidGrounded && distPlayer < fearR && this.fearCooldown <= 0 &&
       ['approach', 'sneak', 'steal', 'investigate', 'attack', 'peek', 'distract'].includes(this.state)) {
       this.scared(true);
     }
@@ -500,6 +560,8 @@ export class Raccoon {
 
     switch (this.state) {
       case 'enter': {
+        if (this.species === 'squirrel' && this.stateTime < 0.05 && !this.glide && this.airborne <= 0) { this.startGlide(); break; }
+        if (this.airborne > 0) break;
         if (this.stateTime < 0.05) {
           const lurk = this.nearestCover(this.dirFromCamp(this.side, 14), 6, 10) ?? this.dirFromCamp(this.side, 13);
           this.target.copy(lurk);
@@ -605,7 +667,7 @@ export class Raccoon {
         if (this.def.id === 'tank' && this.voiceT < 0) { this.voiceT = 3; this.say('growl', 0.8); }
         if (this.moveToward(this.target, sp, dt)) this.setState('steal');
         // fearless brutes charge a kid who stands too close
-        if ((this.def.id === 'tank' || this.isBoss) && !w.playerInTent && distPlayer < 2.3 && this.fearCooldown <= 0) this.setState('charge');
+        if ((this.def.id === 'tank' || this.isBoss) && this.kidGrounded && distPlayer < 2.3 && this.fearCooldown <= 0) this.setState('charge');
         break;
       }
       case 'charge': {
@@ -620,7 +682,7 @@ export class Raccoon {
           const away = new THREE.Vector3(this.pos.x - w.playerPos.x, 0, this.pos.z - w.playerPos.z).normalize();
           this.target.copy(this.pos).addScaledVector(away, 3);
           this.setState('retreat');
-        } else if (this.stateTime > 3 || w.playerInTent) this.setState('approach');
+        } else if (this.stateTime > 3 || !this.kidGrounded) this.setState('approach');
         break;
       }
       case 'distract': {
@@ -655,7 +717,7 @@ export class Raccoon {
           const amt = 3.0 * dt;
           w.onFoodStolen(this, amt);
           c.shake = 1;
-          if (!w.playerInTent && distPlayer < 2.3 && this.fearCooldown <= 0) this.setState('charge');
+          if (this.kidGrounded && distPlayer < 2.3 && this.fearCooldown <= 0) this.setState('charge');
           break;
         }
         if (c.lidOpen < 0.6) {
@@ -725,6 +787,18 @@ export class Raccoon {
             this.target.copy(w.cooler.pos).addScaledVector(away, 7).setY(0);
             this.setState('retreat');
           } else this.scared(false);
+        }
+        break;
+      }
+      case 'playdead': {
+        this.stun -= dt;
+        this.speed = 0;
+        if (this.stun <= 0) {
+          // back on its feet like nothing happened, and right back to the cooler
+          this.say('growl', 0.6);
+          this.plan = 'cooler';
+          this.target.copy(this.coolerSpot());
+          this.setState('approach');
         }
         break;
       }
@@ -861,12 +935,17 @@ export class Raccoon {
     // airborne hop (climb / tumble)
     if (this.airborne > 0) {
       this.airborne -= dt;
-      const k = 1 - Math.max(0, this.airborne) / 0.45;
-      this.pos.lerpVectors(this.airFrom, this.airTo, k);
-      this.pos.y += Math.sin(k * Math.PI) * 0.8;
+      const k = 1 - Math.max(0, this.airborne) / this.airDur;
+      this.pos.lerpVectors(this.airFrom, this.airTo, this.glide ? 1 - (1 - k) * (1 - k) * 0.35 - (1 - k) * 0.65 : k);
+      if (this.glide) this.pos.y = THREE.MathUtils.lerp(this.airFrom.y, this.airTo.y, k) - Math.sin(k * Math.PI) * 0.6;
+      else this.pos.y += Math.sin(k * Math.PI) * 0.8;
       if (this.airborne <= 0) {
         this.pos.copy(this.airTo);
-        audio.play('thump', { pos: this.pos, vol: 0.6 });
+        const wasGlide = this.glide;
+        this.glide = false;
+        this.airDur = 0.45;
+        audio.play('thump', { pos: this.pos, vol: wasGlide ? 0.2 : 0.6 });
+        if (wasGlide && this.state === 'enter') { this.setState('lurk'); this.say('chitter2', 0.6); }
         if (this.state === 'climb') {
           if (this.pos.y > 1) { this.setState('roof'); this.roofSpot.copy(this.pos); }
           else this.arriveOpening();
@@ -912,7 +991,7 @@ export class Raccoon {
       lookPitch = -0.15;
     }
     const isStun = this.state === 'stunned' ? 1 : 0;
-    m.animate(dt, t, { speed: this.speed, stand, reach, stun: isStun, tailUp, sniff, lookYaw, lookPitch, crouch });
+    m.animate(dt, t, { speed: this.speed, stand, reach, stun: isStun, tailUp, sniff, lookYaw, lookPitch, crouch, dead: this.state === 'playdead' ? 1 : 0, glide: this.glide && this.airborne > 0 ? 1 : 0 });
     this.speed *= 0.8;
 
     // eyeshine: faint when facing you, blazing when lit
@@ -920,6 +999,7 @@ export class Raccoon {
     const face = Math.max(0, Math.sin(this.heading + m.look.x) * toCam.x + Math.cos(this.heading + m.look.x) * toCam.z);
     let eye = (0.12 + face * 0.3) + this.eyeBoost * 0.65 * (0.4 + face * 0.6);
     if (this.state === 'escape' || this.state === 'stunned') eye *= 0.25;
+    if (this.state === 'playdead') eye = 0;
     if (this.state === 'inside' && w.playerInTent) eye = 0.9;
     m.setEyes(Math.min(1, eye), isStun);
     // glow paint / sticky goo
