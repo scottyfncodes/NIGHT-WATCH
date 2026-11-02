@@ -24,6 +24,7 @@ You hold your post in the middle of the tent: no walking, just aim and shoot. **
 |---|---|---|
 | Aim | Mouse (click to lock) | Drag anywhere (or drag the FIRE button) |
 | Fire | Left click (hold for semi-auto) | FIRE |
+| Aim down sights (zoom) | Hold right click | AIM (tap to toggle) |
 | Reload | R | RELOAD |
 | Flashlight | F | LIGHT |
 | Use / zip / strap / repair (whatever you're aiming at) | E (hold to tape) | USE (hold to tape) |
@@ -52,7 +53,7 @@ You lose if the cooler is emptied, or if your **nerve** maxes out (raccoons in t
 - **The cooler**: food meter, a lid that animates and gets left open, and a bungee strap that slows raccoons down. The food inside disappears item by item.
 - **Environment**: lanterns light raccoons up but also draw them in, and they get knocked out. The radio keeps raccoons off the tent but masks their sounds. There are spare flashlight batteries, tripwires, and dropped loot to recover.
 - **Audio**: everything is synthesized at load time with WebAudio. Crickets go quiet when a raccoon is near, sounds are HRTF-spatialized, and you can hear Dad snoring in the camper.
-- **Progression**: 16 upgrades across Marker / Defense / Utility, saved in localStorage. Later nights add more raccoons and new archetype mixes.
+- **Progression**: 17 upgrades across Marker / Defense / Utility, including Optics: iron sights (1.5× zoom) to a red dot (2.2×) to a 4× hunting scope with bullet-drop marks, saved in localStorage. Later nights add more raccoons and new archetype mixes.
 
 ## Tech
 

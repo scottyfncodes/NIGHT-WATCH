@@ -9,6 +9,8 @@ export class Input {
   keys = new Set<string>();
   look = new THREE.Vector2();
   fireHeld = false;
+  /** Aim down sights: held with right mouse, toggled with the AIM button on touch. */
+  aimHeld = false;
   interactHeld = false;
   actions: Action[] = [];
   locked = false;
@@ -27,6 +29,7 @@ export class Input {
   potsBtn: HTMLElement;
   lightBtn: HTMLElement;
   reloadBtn: HTMLElement;
+  aimBtn: HTMLElement;
 
   constructor(private canvas: HTMLCanvasElement, overlay: HTMLElement) {
     this.touch = isTouch();
@@ -48,15 +51,20 @@ export class Input {
       this.keys.delete(e.code);
       if (e.code === 'KeyE') this.interactHeld = false;
     });
-    window.addEventListener('blur', () => { this.keys.clear(); this.fireHeld = false; this.interactHeld = false; });
+    window.addEventListener('blur', () => { this.keys.clear(); this.fireHeld = false; this.interactHeld = false; if (!this.touch) this.aimHeld = false; });
 
     // Mouse
     canvas.addEventListener('mousedown', (e) => {
       if (!this.enabled || this.touch) return;
       if (!this.locked) { this.requestLock(); }
       if (e.button === 0) this.fireHeld = true;
+      if (e.button === 2) this.aimHeld = true;
     });
-    window.addEventListener('mouseup', (e) => { if (e.button === 0) this.fireHeld = false; });
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) this.fireHeld = false;
+      if (e.button === 2 && !this.touch) this.aimHeld = false;
+    });
     window.addEventListener('mousemove', (e) => {
       if (!this.enabled || this.touch) return;
       if (this.locked || e.buttons & 1) {
@@ -75,6 +83,7 @@ export class Input {
     this.touchRoot.id = 'touch';
     this.touchRoot.innerHTML = `
       <div class="look-zone" data-zone="look"></div>
+      <button class="tbtn aim" data-act="aim" aria-label="Aim down sights"><span>AIM</span></button>
       <button class="tbtn fire" data-act="fire" aria-label="Fire"><span>FIRE</span></button>
       <button class="tbtn reload" data-act="reload" aria-label="Reload"><span>RELOAD</span></button>
       <button class="tbtn light" data-act="flash" aria-label="Flashlight"><span>LIGHT</span></button>
@@ -90,6 +99,7 @@ export class Input {
     this.potsBtn = this.touchRoot.querySelector('.pots')!;
     this.lightBtn = this.touchRoot.querySelector('.light')!;
     this.reloadBtn = this.touchRoot.querySelector('.reload')!;
+    this.aimBtn = this.touchRoot.querySelector('.aim')!;
     this.touchRoot.style.display = 'none';
 
     const zoneLook = this.touchRoot.querySelector('[data-zone="look"]') as HTMLElement;
@@ -119,7 +129,9 @@ export class Input {
         e.preventDefault();
         e.stopPropagation();
         b.classList.add('down');
-        if (act === 'fire') {
+        if (act === 'aim') {
+          this.aimHeld = !this.aimHeld;
+        } else if (act === 'fire') {
           this.fireHeld = true;
           startLook(e, b); // drag the fire button to aim while shooting
         } else {
@@ -160,6 +172,7 @@ export class Input {
     if (!on) {
       this.fireHeld = false;
       this.interactHeld = false;
+      this.aimHeld = false;
       this.keys.clear();
       this.lookIds.clear();
     }

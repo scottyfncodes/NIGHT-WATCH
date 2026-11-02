@@ -58,6 +58,9 @@ export class Game implements RaccoonWorld, DirectorHost {
   hintsShown = new Set<string>();
   private clock = new THREE.Clock();
   static readonly USE_RANGE = 11;
+  /** 0 = hip fire, 1 = fully aimed down sights. */
+  private ads = 0;
+  private baseFov = 70;
   private interactTarget: Interactable | null = null;
   private holdT = 0;
   private menuT = 0;
@@ -142,8 +145,12 @@ export class Game implements RaccoonWorld, DirectorHost {
     // keep a comfortable horizontal FOV in portrait
     const hFov = 92;
     const vFromH = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(hFov) / 2) / cam.aspect));
-    cam.fov = cam.aspect < 1.2 ? Math.min(100, vFromH) : 70;
+    this.baseFov = cam.aspect < 1.2 ? Math.min(100, vFromH) : 70;
+    cam.fov = this.zoomedFov();
     cam.updateProjectionMatrix();
+    this.marker.camera.aspect = cam.aspect;
+    this.marker.camera.fov = this.baseFov;
+    this.marker.camera.updateProjectionMatrix();
     document.body.classList.toggle('portrait', h > w);
   }
 
@@ -249,6 +256,8 @@ export class Game implements RaccoonWorld, DirectorHost {
     this.tent.reset();
     this.camp.reset();
     this.player.reset(this.loadout);
+    this.ads = 0;
+    this.marker.root.visible = true;
     this.marker.configure(this.loadout);
     this.nerve = 0;
     this.dayMix = 0;
@@ -267,6 +276,7 @@ export class Game implements RaccoonWorld, DirectorHost {
     // tutorial beats for the first minute
     if (this.night === 1) {
       setTimeout(() => this.hint('start', this.input.touch ? 'Something’s at the cooler. Drag to aim, hold FIRE to shoot.' : 'Something’s at the cooler. Click to shoot — paintballs drop, so aim a little high at range.'), 1200);
+      setTimeout(() => this.hint('aim', this.input.touch ? 'Tap AIM to look down the sights. Tighter shots, and you can see farther.' : 'Hold right-click to aim down the sights. Tighter shots, and you can see farther.'), 20000);
       setTimeout(() => this.hint('light', this.input.touch ? 'Tap LIGHT for the flashlight. Their eyes shine back.' : 'Press F for the flashlight. Their eyes shine back.'), 9000);
     }
   }
@@ -521,6 +531,25 @@ export class Game implements RaccoonWorld, DirectorHost {
     this.marker.lowered = 1;
   }
 
+  private zoomedFov() {
+    const e = this.ads * this.ads * (3 - 2 * this.ads);
+    const mag = 1 + ((this.loadout?.zoom ?? 1) - 1) * e;
+    return THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.baseFov) / 2) / mag));
+  }
+
+  private updateAim(dt: number, playing: boolean) {
+    const L = this.loadout;
+    const want = playing && this.input.aimHeld && this.marker.reloading <= 0 ? 1 : 0;
+    const step = dt / L.adsTime;
+    this.ads = want > this.ads ? Math.min(1, this.ads + step) : Math.max(0, this.ads - step * 1.4);
+    const cam = this.player.camera;
+    const fov = this.zoomedFov();
+    if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = fov; cam.updateProjectionMatrix(); }
+    this.ui.ads(this.ads, L.optic);
+    this.marker.root.visible = !(L.optic === 2 && this.ads > 0.9);
+    this.input.aimBtn.classList.toggle('on', this.input.aimHeld);
+  }
+
   private updateGame(dt: number, t: number) {
     const L = this.loadout;
     const playing = this.mode === 'playing';
@@ -528,12 +557,15 @@ export class Game implements RaccoonWorld, DirectorHost {
     if (playing) {
       const look = this.input.consumeLook();
       this.lookDelta.copy(look);
-      this.player.look(look.x, look.y);
+      // slow the look down in proportion to the zoom so the reticle stays controllable
+      const lookK = Math.tan(THREE.MathUtils.degToRad(this.player.camera.fov) / 2) / Math.tan(THREE.MathUtils.degToRad(this.baseFov) / 2);
+      this.player.look(look.x * lookK, look.y * lookK);
       for (const a of this.input.takeActions()) this.handleAction(a);
     } else {
       this.lookDelta.set(0, 0);
     }
     this.player.update(dt, L);
+    this.updateAim(dt, playing);
     // firing
     this.marker.lowered += ((playing ? 0 : 1) - this.marker.lowered) * Math.min(1, dt * 4);
     if (playing && this.input.fireHeld) {
@@ -541,7 +573,7 @@ export class Game implements RaccoonWorld, DirectorHost {
       if (fired) this.fire(fired);
       if (!L.semiAuto && fired) this.input.fireHeld = this.input.touch ? this.input.fireHeld : false;
     }
-    this.marker.update(dt, L, this.player.moving, this.lookDelta, this.player.flashOn);
+    this.marker.update(dt, L, this.ads, this.lookDelta, this.player.flashOn);
     // bone dry? there's always one more pod rattling around in the sleeping bag
     if (playing && this.marker.hopper + this.marker.reserve === 0 && this.podsThisWave < 2) {
       this.dryT += dt;
@@ -622,7 +654,7 @@ export class Game implements RaccoonWorld, DirectorHost {
     const L = this.loadout;
     const cam = this.player.camera;
     const fwd = this.player.forward();
-    const spread = L.spread * (this.player.moving > 0.1 ? L.moveSpreadMul : 1);
+    const spread = L.spread * THREE.MathUtils.lerp(1, L.adsSpreadMul, this.ads);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
     const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * spread;
@@ -1016,7 +1048,9 @@ export class Game implements RaccoonWorld, DirectorHost {
       r.clearDepth();
       this.marker.root.position.copy(this.player.camera.position);
       this.marker.root.quaternion.copy(this.player.camera.quaternion);
-      r.render(this.marker.scene, this.player.camera);
+      this.marker.camera.position.copy(this.player.camera.position);
+      this.marker.camera.quaternion.copy(this.player.camera.quaternion);
+      r.render(this.marker.scene, this.marker.camera);
     }
   }
 }

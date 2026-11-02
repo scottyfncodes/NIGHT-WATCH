@@ -149,7 +149,7 @@ export const WAVES: WaveDef[] = [
 // ─── Upgrades ──────────────────────────────────────────────
 
 export type UpgradeId =
-  | 'semiauto' | 'hopper' | 'loader' | 'barrel' | 'glow' | 'sticky' | 'burst' | 'decoyRounds'
+  | 'semiauto' | 'hopper' | 'loader' | 'barrel' | 'optics' | 'glow' | 'sticky' | 'burst' | 'decoyRounds'
   | 'ripstop' | 'coolerLock' | 'tripwire' | 'motion'
   | 'maglite' | 'extraPaint' | 'hotdog' | 'pots';
 
@@ -166,7 +166,8 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'semiauto', cat: 'weapon', name: 'Semi-Auto Conversion', icon: '⟫', costs: [170], desc: ['Swap the pump for a semi-auto valve. Hold to fire, ~3× faster.'] },
   { id: 'hopper', cat: 'weapon', name: 'Bigger Hopper', icon: '◍', costs: [60, 110, 170], desc: ['Hopper 12 → 20 balls.', 'Hopper 20 → 30 balls.', 'Hopper 30 → 45 balls.'] },
   { id: 'loader', cat: 'weapon', name: 'Speed Feeder', icon: '↻', costs: [70, 130], desc: ['Reload 2.3s → 1.6s.', 'Reload 1.6s → 1.0s.'] },
-  { id: 'barrel', cat: 'weapon', name: 'Long Barrel', icon: '━', costs: [80, 140], desc: ['+20% muzzle velocity, −35% spread.', '+40% velocity, −60% spread, steadier while moving.'] },
+  { id: 'barrel', cat: 'weapon', name: 'Long Barrel', icon: '━', costs: [80, 140], desc: ['+20% muzzle velocity, −35% spread.', '+40% velocity, −60% spread.'] },
+  { id: 'optics', cat: 'weapon', name: 'Optics', icon: '⊕', costs: [80, 160], desc: ['Red-dot sight. Aiming zooms 2.2× (iron sights: 1.5×) and tightens your grouping.', 'Hunting scope. 4× zoom with a crosshair reticle for pinpoint shots across the clearing.'] },
   { id: 'glow', cat: 'weapon', name: 'Glow Rounds', icon: '✦', costs: [90, 70], desc: ['10 glow rounds per night. Tagged raccoons glow and can’t hide.', '18 glow rounds; glow lasts twice as long.'] },
   { id: 'sticky', cat: 'weapon', name: 'Sticky Rounds', icon: '❋', costs: [100, 70], desc: ['8 sticky rounds. Gooey paint slows raccoons 55% for 4s.', '14 sticky rounds; slow lasts 6s.'] },
   { id: 'burst', cat: 'weapon', name: 'Burst Rounds', icon: '✺', costs: [130, 90], desc: ['5 burst rounds. Splatter hits everything within 2.6m.', '9 burst rounds; 3.4m splash.'] },
